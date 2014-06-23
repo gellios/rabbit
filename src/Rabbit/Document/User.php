@@ -5,7 +5,7 @@ namespace Rabbit\Document;
 use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
 
 /** @ODM\Document */
-class Message
+class User
 {
     /**
      * @var int
@@ -18,15 +18,16 @@ class Message
      * @var string
      *
      * @ODM\String
+     * @ODM\Index
      */
-    private $text;
+    private $login;
 
     /**
-     * @var User
+     * @var string
      *
-     * @ODM\ReferenceOne(targetDocument="User")
+     * @ODM\String
      */
-    private $user;
+    private $password;
 
     /**
      * @var \DateTime
@@ -49,12 +50,12 @@ class Message
     }
 
     /**
-     * @param string $text
-     * @return Message
+     * @param string $login
+     * @return User
      */
-    public function setText($text)
+    public function setLogin($login)
     {
-        $this->text = $text;
+        $this->login = $login;
 
         return $this;
     }
@@ -62,35 +63,27 @@ class Message
     /**
      * @return string
      */
-    public function getText()
+    public function getLogin()
     {
-        return $this->text;
+        return $this->login;
     }
 
     /**
-     * @return \DateTime
+     * @param string $password
+     * @return User
      */
-    public function getCreatedAt()
+    public function setPassword($password)
     {
-        return $this->createdAt;
-    }
-
-    /**
-     * @param User $user
-     * @return Message
-     */
-    public function setUser(User $user)
-    {
-        $this->user = $user;
+        $this->password= $password;
 
         return $this;
     }
 
     /**
-     * @return User
+     * @return string
      */
-    public function getUser()
+    public function getPassword()
     {
-        return $this->user;
+        return $this->password;
     }
 }

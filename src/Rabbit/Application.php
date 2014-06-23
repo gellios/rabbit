@@ -2,11 +2,15 @@
 
 namespace Rabbit;
 
+use Symfony\Component\HttpFoundation\Session\Session;
+
 class Application extends \Pimple
 {
     public function __construct()
     {
         parent::__construct();
+
+        $app = $this;
 
         $config = include(CONFIG_PATH.'/config.php');
 
@@ -22,6 +26,10 @@ class Application extends \Pimple
         );
 
         $this['doctrine.dm'] = \Doctrine\ODM\MongoDB\DocumentManager::create(new \Doctrine\MongoDB\Connection(), $dConfig);
+
+        $this['manager.user'] = function() use ($app) {
+            return new \Rabbit\Manager\UserManager($this->getDoctrineDocumentmanager());
+        };
     }
 
     /**
@@ -33,15 +41,23 @@ class Application extends \Pimple
     }
 
     /**
+     * @return \Rabbit\Manager\UserManager
+     */
+    public function getUserManager()
+    {
+        return $this['manager.user'];
+    }
+
+    /**
      * @param int $port
      * @return \Ratchet\Server\IoServer
      */
-    public function createServer($port = 8080)
+    public function createServer($port = 8181)
     {
         return \Ratchet\Server\IoServer::factory(
             new \Ratchet\Http\HttpServer(
                 new \Ratchet\WebSocket\WsServer(
-                    new Chat()
+                    new Chat($this)
                 )
             ),
             $port
