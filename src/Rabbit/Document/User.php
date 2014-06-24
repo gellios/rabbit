@@ -18,7 +18,6 @@ class User
      * @var string
      *
      * @ODM\String
-     * @ODM\Index
      */
     private $login;
 

@@ -14,6 +14,9 @@ Rabbit.prototype.connect = function () {
 	};
 	this.ws.onmessage = function(event) {
 		_client.triggerEvent(Rabbit.Event.WS_MESSAGE, event);
+		var data = JSON.parse(event.data);
+		_client.triggerEvent(data.event, data.data);
+
 	};
 	this.ws.onclose = function(event) {
 		_client.triggerEvent(Rabbit.Event.WS_CLOSE, event);
@@ -25,7 +28,8 @@ Rabbit.Event = {
 	WS_OPEN: 1,
 	WS_MESSAGE : 2,
 	AUTH_SUCCESS: 3,
-	AUTH_ERROR: 4
+	AUTH_ERROR: 4,
+	MESSAGE_NEW: 5
 };
 
 Rabbit.prototype.addEventListener = function (type, listener) {
@@ -43,8 +47,8 @@ Rabbit.prototype.triggerEvent = function (type, data) {
 	if (!(type in this.eventListenters)) {
 		return;
 	}
-	for (var i in this.eventListenters[Rabbit.Event.WS_OPEN]) {
-		this.eventListenters[Rabbit.Event.WS_OPEN][i](data);
+	for (var i in this.eventListenters[type]) {
+		this.eventListenters[type][i](data);
 	}
 };
 
