@@ -29,7 +29,9 @@ Rabbit.Event = {
 	WS_MESSAGE : 2,
 	AUTH_SUCCESS: 3,
 	AUTH_ERROR: 4,
-	MESSAGE_NEW: 5
+	MESSAGE_NEW: 5,
+	USER_LOGIN: 6,
+	USER_LOGOUT: 7
 };
 
 Rabbit.prototype.addEventListener = function (type, listener) {

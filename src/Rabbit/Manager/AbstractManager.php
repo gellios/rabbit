@@ -2,16 +2,8 @@
 
 namespace Rabbit\Manager;
 
-abstract class AbstractManager
+abstract class AbstractManager extends \Rabbit\ContainerAware
 {
-    /** @var  \Doctrine\ODM\MongoDB\DocumentManager */
-    protected $dm;
-
-    public function __construct(\Doctrine\ODM\MongoDB\DocumentManager $dm)
-    {
-        $this->dm = $dm;
-    }
-
     /**
      * @return string
      */
@@ -22,6 +14,8 @@ abstract class AbstractManager
      */
     public function getRepository()
     {
-        return $this->dm->getRepository($this->getDocumentName());
+        return $this->getDoctrineDocumentManager()->getRepository(
+            $this->getDocumentName()
+        );
     }
 }

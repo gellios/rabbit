@@ -25,8 +25,8 @@ $(function () {
 	});
 
 	rabbitClient.addEventListener(Rabbit.Event.AUTH_ERROR, function (data) {
-		alert('Ошибка авторизации!');
 		hideLoader();
+		alert('Ошибка авторизации!');
 	});
 
 	rabbitClient.connect();

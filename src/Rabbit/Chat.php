@@ -5,11 +5,13 @@ namespace Rabbit;
 use Ratchet\MessageComponentInterface;
 use Ratchet\ConnectionInterface;
 
-final class Chat implements MessageComponentInterface
+final class Chat extends ContainerAware implements MessageComponentInterface
 {
     const EVENT_TYPE_AUTH_SUCCESS = 3;
     const EVENT_TYPE_AUTH_ERROR = 4;
     const EVENT_TYPE_MESSAGE_NEW = 5;
+    const EVENT_TYPE_USER_LOGIN = 6;
+    const EVENT_TYPE_USER_LOGOUT = 7;
 
     /**
      * @var \SplObjectStorage
@@ -22,16 +24,11 @@ final class Chat implements MessageComponentInterface
     private $users = array();
 
     /**
-     * @var Application
+     * @param \Pimple $container
      */
-    private $app;
-
-    /**
-     * @param Application $app
-     */
-    public function __construct(Application $app)
+    public function __construct(\Pimple $container)
     {
-        $this->app = $app;
+        parent::__construct($container);
         $this->clients = new \SplObjectStorage;
     }
 
@@ -53,16 +50,19 @@ final class Chat implements MessageComponentInterface
         $data = json_decode($msg);
         if ($data->command == 'auth') {
             /** @var \Rabbit\Document\User $user */
-            $user = $this->app->getUserManager()->getRepository()->findOneBy(array(
+            $user = $this->getUserManager()->getRepository()->findOneBy(array(
                 'login' => $data->params->login,
                 'password' => hash('sha256', $data->params->password),
             ));
             unset($this->users[$from->resourceId]);
             if ($user) {
-                $this->users[$from->resourceId] = $user->getId();
-            }
-            if ($user) {
-                $this->send($from, self::EVENT_TYPE_AUTH_SUCCESS);
+                $this->users[$from->resourceId] = array(
+                    'id' => $user->getId(),
+                    'login' => $user->getLogin(),
+                );
+                $this->send($from, self::EVENT_TYPE_AUTH_SUCCESS, array(
+                    'users' => array_values($this->users),
+                ));
                 $this->debug("User '{$user->getLogin()}' is logged in");
             } else {
                 $this->send($from, self::EVENT_TYPE_AUTH_ERROR);
@@ -74,9 +74,9 @@ final class Chat implements MessageComponentInterface
                 $this->send($from, self::EVENT_TYPE_AUTH_ERROR);
                 return;
             }
-            $userId = $this->users[$from->resourceId];
+            $userId = $this->users[$from->resourceId]['id'];
             /** @var \Rabbit\Document\User $user */
-            $user = $this->app->getUserManager()->getRepository()->find($userId);
+            $user = $this->getUserManager()->getRepository()->find($userId);
             if (!$user) {
                 $this->send($from, self::EVENT_TYPE_AUTH_ERROR);
                 return;
@@ -86,8 +86,8 @@ final class Chat implements MessageComponentInterface
             $message->setText($data->params->message);
             $message->setUser($user);
 
-            $this->app->getDoctrineDocumentmanager()->persist($message);
-            $this->app->getDoctrineDocumentmanager()->flush();
+            $this->getDoctrineDocumentManager()->persist($message);
+            $this->getDoctrineDocumentManager()->flush();
 
             foreach ($this->clients as $client) {
                 if ($from !== $client) {
@@ -109,9 +109,20 @@ final class Chat implements MessageComponentInterface
      */
     public function onClose(ConnectionInterface $conn)
     {
-        $this->clients->detach($conn);
-        unset($this->users[$conn->resourceId]);
+        $user = null;
+        if (isset($this->users[$conn->resourceId])) {
+            $user = $this->users[$conn->resourceId];
+            unset($this->users[$conn->resourceId]);
+        }
         $this->debug("Connection {$conn->resourceId} has disconnected");
+        $this->clients->detach($conn);
+        if ($user !== null) {
+            foreach ($this->clients as $client) {
+                $this->send($client, self::EVENT_TYPE_USER_LOGOUT, array(
+                    'user' => $user,
+                ));
+            }
+        }
     }
 
     /**

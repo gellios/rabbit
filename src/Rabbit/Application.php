@@ -2,15 +2,16 @@
 
 namespace Rabbit;
 
-use Symfony\Component\HttpFoundation\Session\Session;
-
-class Application extends \Pimple
+final class Application
 {
+    /**
+     * @var \Pimple
+     */
+    private $container;
+
     public function __construct()
     {
-        parent::__construct();
-
-        $app = $this;
+        $container = new \Pimple();
 
         $config = include(CONFIG_PATH.'/config.php');
 
@@ -25,27 +26,13 @@ class Application extends \Pimple
             \Doctrine\ODM\MongoDB\Mapping\Driver\AnnotationDriver::create(dirname(__FILE__).'/Document')
         );
 
-        $this['doctrine.dm'] = \Doctrine\ODM\MongoDB\DocumentManager::create(new \Doctrine\MongoDB\Connection(), $dConfig);
+        $container['doctrine.dm'] = \Doctrine\ODM\MongoDB\DocumentManager::create(new \Doctrine\MongoDB\Connection(), $dConfig);
 
-        $this['manager.user'] = function() use ($app) {
-            return new \Rabbit\Manager\UserManager($this->getDoctrineDocumentmanager());
+        $container['manager.user'] = function() use ($container) {
+            return new \Rabbit\Manager\UserManager($container);
         };
-    }
 
-    /**
-     * @return \Doctrine\ODM\MongoDB\DocumentManager
-     */
-    public function getDoctrineDocumentmanager()
-    {
-        return $this['doctrine.dm'];
-    }
-
-    /**
-     * @return \Rabbit\Manager\UserManager
-     */
-    public function getUserManager()
-    {
-        return $this['manager.user'];
+        $this->container = $container;
     }
 
     /**
@@ -57,7 +44,7 @@ class Application extends \Pimple
         return \Ratchet\Server\IoServer::factory(
             new \Ratchet\Http\HttpServer(
                 new \Ratchet\WebSocket\WsServer(
-                    new Chat($this)
+                    new Chat($this->container)
                 )
             ),
             $port
